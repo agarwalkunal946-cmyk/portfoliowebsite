@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "framer-motion": "^12.40.0",
     "lucide-react": "^0.468.0",
-    "vite": "^6.0.5",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
-  },
-  "devDependencies": {}
+    "react-dom": "^19.0.0",
+    "vite": "^6.0.5"
+  }
 }

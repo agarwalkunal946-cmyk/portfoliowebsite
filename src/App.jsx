@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   BarChart3,
   CalendarDays,
@@ -9,9 +10,11 @@ import {
   Image as ImageIcon,
   Mail,
   MapPin,
+  Moon,
   Phone,
   Search,
   Sparkles,
+  Sun,
   Target,
   Video,
   X,
@@ -31,6 +34,30 @@ import {
 
 const renderableImageExtensions = new Set(["png", "jpg", "jpeg"]);
 const originalSourceAvailable = import.meta.env.DEV;
+const libraryPageSize = 24;
+const easeOutExpo = [0.16, 1, 0.3, 1];
+
+const revealVariants = {
+  hidden: { opacity: 0, y: 34 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.72, ease: easeOutExpo } }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 28, scale: 0.96 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.58, ease: easeOutExpo } }
+};
+
+const staggerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } }
+};
+
+const revealViewport = { once: true, amount: 0.2 };
+
+function getInitialTheme() {
+  if (typeof window === "undefined") return "light";
+  return window.localStorage.getItem("portfolio-theme") || "light";
+}
 
 function originalAssetUrl(assetOrPath) {
   const path = typeof assetOrPath === "string" ? assetOrPath : assetOrPath.path;
@@ -70,11 +97,17 @@ function canPreviewAsset(asset) {
 
 function SectionTitle({ eyebrow, title, text, compact = false }) {
   return (
-    <div className={`section-title ${compact ? "compact" : ""}`}>
+    <motion.div
+      className={`section-title ${compact ? "compact" : ""}`}
+      variants={revealVariants}
+      initial="hidden"
+      whileInView="show"
+      viewport={revealViewport}
+    >
       <span>{eyebrow}</span>
       <h2>{title}</h2>
       {text && <p>{text}</p>}
-    </div>
+    </motion.div>
   );
 }
 
@@ -126,30 +159,71 @@ function CampaignTheatre({ slides, activeIndex, setActiveIndex, onOpen }) {
   }
 
   return (
-    <div className="campaign-theatre">
-      <div className="theatre-image-wrap">
-        <button type="button" className="theatre-image" onClick={() => onOpen(active.asset)}>
-          <img key={active.asset.path} src={assetPreviewUrl(active.asset)} alt={active.title} />
-          <span>{active.label}</span>
-        </button>
-        <div className="theatre-controls" aria-label="Campaign carousel controls">
-          <button type="button" onClick={() => move(-1)} aria-label="Previous campaign">
-            <ChevronLeft aria-hidden="true" />
+    <motion.div
+      className="campaign-theatre"
+      variants={revealVariants}
+      initial="hidden"
+      whileInView="show"
+      viewport={revealViewport}
+    >
+      <div className="theatre-main">
+        <div className="theatre-image-wrap">
+          <button type="button" className="theatre-image" onClick={() => onOpen(active.asset)}>
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={active.asset.path}
+                src={assetPreviewUrl(active.asset)}
+                alt={active.title}
+                initial={{ opacity: 0, x: 38, scale: 0.96 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -28, scale: 0.98 }}
+                transition={{ duration: 0.58, ease: easeOutExpo }}
+              />
+            </AnimatePresence>
+            <span>{active.label}</span>
           </button>
-          <button type="button" onClick={() => move(1)} aria-label="Next campaign">
-            <ChevronRight aria-hidden="true" />
-          </button>
+          <div className="theatre-controls" aria-label="Campaign carousel controls">
+            <button type="button" onClick={() => move(-1)} aria-label="Previous campaign">
+              <ChevronLeft aria-hidden="true" />
+            </button>
+            <button type="button" onClick={() => move(1)} aria-label="Next campaign">
+              <ChevronRight aria-hidden="true" />
+            </button>
+          </div>
         </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            className="theatre-copy"
+            key={active.title}
+            initial={{ opacity: 0, y: 24, filter: "blur(8px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -18, filter: "blur(8px)" }}
+            transition={{ duration: 0.5, ease: easeOutExpo }}
+          >
+            <span>{String(activeIndex + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
+            <h3>{active.title}</h3>
+            <p>{active.result}</p>
+            <div className="theatre-tags">
+              {active.tags.map((tag) => (
+                <small key={tag}>{tag}</small>
+              ))}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
-      <div className="theatre-copy" key={active.title}>
-        <span>{String(activeIndex + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
-        <h3>{active.title}</h3>
-        <p>{active.result}</p>
-        <div className="theatre-tags">
-          {active.tags.map((tag) => (
-            <small key={tag}>{tag}</small>
-          ))}
-        </div>
+      <div className="theatre-thumbs">
+        {slides.map((slide, index) => (
+          <button
+            type="button"
+            key={slide.title}
+            className={index === activeIndex ? "active" : ""}
+            onClick={() => setActiveIndex(index)}
+            aria-label={`Preview ${slide.title}`}
+          >
+            <img src={assetPreviewUrl(slide.asset)} alt="" loading="lazy" />
+            <span>{slide.label}</span>
+          </button>
+        ))}
       </div>
       <div className="theatre-progress">
         {slides.map((slide, index) => (
@@ -164,7 +238,7 @@ function CampaignTheatre({ slides, activeIndex, setActiveIndex, onOpen }) {
           </button>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -173,14 +247,14 @@ function ServiceRow({ service, index }) {
   const Icon = icons[index % icons.length];
 
   return (
-    <article className="service-row">
+    <motion.article className="service-row" variants={cardVariants} whileHover={{ x: 8 }}>
       <span>{String(index + 1).padStart(2, "0")}</span>
       <Icon aria-hidden="true" />
       <div>
         <h3>{service.title}</h3>
         <p>{service.text}</p>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
@@ -188,7 +262,13 @@ function ProjectFeature({ study, index, onOpen }) {
   const asset = getAsset(study.assetPath);
 
   return (
-    <article className={`project-feature ${index % 2 ? "reverse" : ""}`}>
+    <motion.article
+      className={`project-feature ${index % 2 ? "reverse" : ""}`}
+      variants={revealVariants}
+      initial="hidden"
+      whileInView="show"
+      viewport={revealViewport}
+    >
       <button className="project-media" type="button" onClick={() => asset && onOpen(asset)}>
         {asset && <img src={assetPreviewUrl(asset)} alt={study.title} loading="lazy" />}
       </button>
@@ -203,7 +283,7 @@ function ProjectFeature({ study, index, onOpen }) {
           ))}
         </div>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
@@ -216,7 +296,18 @@ function LibraryItem({ asset, onOpen }) {
       : asset.collection || "Selected portfolio preview from the working content system.";
 
   return (
-    <button className="library-item" type="button" onClick={() => onOpen(asset)}>
+    <motion.button
+      className="library-item"
+      type="button"
+      onClick={() => onOpen(asset)}
+      variants={cardVariants}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.1 }}
+      whileHover={{ y: -10, scale: 1.015 }}
+      whileTap={{ scale: 0.985 }}
+      layout
+    >
       <span className="library-type">
         <Icon aria-hidden="true" />
         {asset.type}
@@ -236,15 +327,22 @@ function LibraryItem({ asset, onOpen }) {
         <strong>{title}</strong>
         <em>{note}</em>
       </span>
-    </button>
+    </motion.button>
   );
 }
 
 export default function App() {
   const [activeSlide, setActiveSlide] = useState(0);
-  const [activeLibrary, setActiveLibrary] = useState("Beauty");
+  const [activeLibrary, setActiveLibrary] = useState("All");
   const [query, setQuery] = useState("");
+  const [visibleAssetCount, setVisibleAssetCount] = useState(libraryPageSize);
+  const [theme, setTheme] = useState(getInitialTheme);
   const [openAsset, setOpenAsset] = useState(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem("portfolio-theme", theme);
+  }, [theme]);
 
   const campaignSlides = useMemo(
     () =>
@@ -264,6 +362,10 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, [campaignSlides.length]);
 
+  useEffect(() => {
+    setVisibleAssetCount(libraryPageSize);
+  }, [activeLibrary, query]);
+
   const heroStack = useMemo(
     () =>
       [
@@ -276,49 +378,73 @@ export default function App() {
     []
   );
 
-  const libraryGroups = useMemo(
-    () => ({
-      Beauty: manifest.assets.filter((asset) => asset.medium === "Canva Designs" && asset.type === "image").slice(0, 10),
-      Hospitality: manifest.assets.filter((asset) => asset.medium === "DSLR Shoots").slice(0, 10),
-      Fashion: manifest.assets.filter((asset) => asset.medium === "Clothing Shoot").slice(0, 10),
-      Reels: manifest.assets.filter((asset) => asset.type === "video").slice(0, 10)
-    }),
+  const portfolioAssets = useMemo(
+    () => manifest.assets.filter((asset) => asset.type !== "document" && canPreviewAsset(asset)),
     []
   );
 
-  const searchedAssets = useMemo(() => {
+  const libraryGroups = useMemo(
+    () => ({
+      All: portfolioAssets,
+      Beauty: portfolioAssets.filter((asset) => asset.medium === "Canva Designs"),
+      Hospitality: portfolioAssets.filter((asset) => asset.medium === "DSLR Shoots" || asset.medium === "iPhone Shoots"),
+      Fashion: portfolioAssets.filter((asset) => asset.medium === "Clothing Shoot"),
+      Reels: portfolioAssets.filter((asset) => asset.type === "video")
+    }),
+    [portfolioAssets]
+  );
+
+  const filteredLibraryAssets = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return libraryGroups[activeLibrary] || [];
-    return manifest.assets
-      .filter((asset) => asset.type !== "document")
-      .filter((asset) =>
+    return portfolioAssets.filter((asset) =>
         [asset.title, asset.name, asset.medium, asset.project, asset.collection, asset.path]
           .join(" ")
           .toLowerCase()
           .includes(q)
-      )
-      .slice(0, 8);
-  }, [activeLibrary, libraryGroups, query]);
+      );
+  }, [activeLibrary, libraryGroups, portfolioAssets, query]);
+
+  const visibleLibraryAssets = useMemo(
+    () => filteredLibraryAssets.slice(0, visibleAssetCount),
+    [filteredLibraryAssets, visibleAssetCount]
+  );
 
   return (
-    <>
+    <div className="app-shell">
       <header className="site-header">
         <nav className="nav-shell" aria-label="Primary navigation">
           <a className="brand-mark" href="#home" aria-label="Khushali Bochiwal home">
             {profile.initials}
           </a>
-          <div className="nav-links">
-            <a href="#work">Work</a>
-            <a href="#services">Services</a>
-            <a href="#resume">Resume</a>
-            <a href="#contact">Contact</a>
+          <div className="nav-actions">
+            <div className="nav-links">
+              <a href="#work">Work</a>
+              <a href="#services">Services</a>
+              <a href="#resume">Resume</a>
+              <a href="#contact">Contact</a>
+            </div>
+            <button
+              className="theme-toggle"
+              type="button"
+              onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+            >
+              {theme === "dark" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+              <span>{theme === "dark" ? "Light" : "Dark"}</span>
+            </button>
           </div>
         </nav>
       </header>
 
       <main id="home">
         <section className="hero">
-          <div className="hero-copy">
+          <motion.div
+            className="hero-copy"
+            initial={{ opacity: 0, y: 42 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.78, ease: easeOutExpo }}
+          >
             <span className="eyebrow">Digital marketer | social media strategist</span>
             <h1>Premium social presence for brands that need more than posts.</h1>
             <p>
@@ -335,28 +461,41 @@ export default function App() {
                 Book a campaign
               </a>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="hero-art" aria-label="Portfolio visual preview">
+          <motion.div
+            className="hero-art"
+            aria-label="Portfolio visual preview"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.12, ease: easeOutExpo }}
+          >
             {heroStack.map((asset, index) => (
-              <button key={asset.path} type="button" className={`floating-shot shot-${index + 1}`} onClick={() => setOpenAsset(asset)}>
+              <motion.button
+                key={asset.path}
+                type="button"
+                className={`floating-shot shot-${index + 1}`}
+                onClick={() => setOpenAsset(asset)}
+                whileHover={{ scale: 1.04, rotate: 0 }}
+                whileTap={{ scale: 0.98 }}
+              >
                 <img src={assetPreviewUrl(asset)} alt={asset.project} />
-              </button>
+              </motion.button>
             ))}
-            <div className="hero-card">
+            <motion.div className="hero-card" initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.58, ease: easeOutExpo }}>
               <strong>{cleanNumber(manifest.totals.files)}</strong>
               <span>curated creative assets</span>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </section>
 
         <section className="signal-strip">
           <div className="content-shell">
-            <div className="signal-track">
+            <motion.div className="signal-track" variants={staggerVariants} initial="hidden" whileInView="show" viewport={revealViewport}>
               {["Strategy", "Reels", "Carousels", "Meta Ads", "Brand Launches", "Client Servicing", "Shoot Direction"].map((item) => (
-                <span key={item}>{item}</span>
+                <motion.span key={item} variants={cardVariants}>{item}</motion.span>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -367,20 +506,20 @@ export default function App() {
               title="Keep the work curated. Show the thinking. Let the visuals sell the skill."
               text="A client-facing portfolio should highlight the categories, proof, process, and strongest visuals that make Khushali easy to trust and easy to hire."
             />
-            <div className="intro-proof">
-              <div>
+            <motion.div className="intro-proof" variants={staggerVariants} initial="hidden" whileInView="show" viewport={revealViewport}>
+              <motion.div variants={cardVariants}>
                 <strong>{cleanNumber(manifest.totals.byType.image)}</strong>
                 <span>images and designs</span>
-              </div>
-              <div>
+              </motion.div>
+              <motion.div variants={cardVariants}>
                 <strong>{cleanNumber(manifest.totals.byType.video)}</strong>
                 <span>video and reel assets</span>
-              </div>
-              <div>
+              </motion.div>
+              <motion.div variants={cardVariants}>
                 <strong>4</strong>
                 <span>core industries shown</span>
-              </div>
-            </div>
+              </motion.div>
+            </motion.div>
           </div>
         </section>
 
@@ -409,21 +548,21 @@ export default function App() {
                 text="These are the services that matter for the client, presented as a working capability system instead of random boxes."
               />
             </div>
-            <div className="service-list">
+            <motion.div className="service-list" variants={staggerVariants} initial="hidden" whileInView="show" viewport={revealViewport}>
               {services.map((service, index) => (
                 <ServiceRow key={service.title} service={service} index={index} />
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
         <section className="proof-section">
           <div className="content-shell">
-            <div className="proof-line">
+            <motion.div className="proof-line" variants={staggerVariants} initial="hidden" whileInView="show" viewport={revealViewport}>
               {proofPoints.map((point) => (
-                <span key={point}>{point}</span>
+                <motion.span key={point} variants={cardVariants} whileHover={{ y: -6 }}>{point}</motion.span>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -449,11 +588,11 @@ export default function App() {
               title="Different formats, one premium visual language."
               text="A portfolio should show range without becoming cluttered: education, food, creator thumbnails, fashion imagery, and campaign assets."
             />
-            <div className="visual-carousel">
+            <motion.div className="visual-carousel" variants={staggerVariants} initial="hidden" whileInView="show" viewport={revealViewport}>
               {visualStories.map((story, index) => {
                 const asset = getAsset(story.assetPath, story.fallbackPath);
                 return (
-                  <article key={story.title} className={`visual-slide visual-${index + 1}`}>
+                  <motion.article key={story.title} className={`visual-slide visual-${index + 1}`} variants={cardVariants} whileHover={{ y: -8 }}>
                     <button type="button" onClick={() => asset && setOpenAsset(asset)}>
                       {asset && <img src={assetPreviewUrl(asset)} alt={story.title} loading="lazy" />}
                     </button>
@@ -462,10 +601,10 @@ export default function App() {
                       <h3>{story.title}</h3>
                       <p>{story.text}</p>
                     </div>
-                  </article>
+                  </motion.article>
                 );
               })}
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -535,15 +674,15 @@ export default function App() {
               text="This is the operating rhythm behind the work, shown simply because clients care about clarity."
               compact
             />
-            <div className="method-steps">
+            <motion.div className="method-steps" variants={staggerVariants} initial="hidden" whileInView="show" viewport={revealViewport}>
               {workflow.map((step, index) => (
-                <article key={step.title}>
+                <motion.article key={step.title} variants={cardVariants} whileHover={{ y: -6 }}>
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <h3>{step.title}</h3>
                   <p>{step.text}</p>
-                </article>
+                </motion.article>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -557,7 +696,7 @@ export default function App() {
             <div className="library-toolbar">
               <label>
                 <Search aria-hidden="true" />
-                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search assets..." />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by brand, format, or category..." />
               </label>
               <div>
                 {Object.keys(libraryGroups).map((group) => (
@@ -576,18 +715,28 @@ export default function App() {
               </div>
             </div>
             <p className="library-count">
-              Showing {searchedAssets.length} selected {query ? "matching" : activeLibrary.toLowerCase()} pieces.
+              Showing {visibleLibraryAssets.length} of {filteredLibraryAssets.length} {query ? "matching" : activeLibrary.toLowerCase()} pieces.
             </p>
-            <div className="library-grid">
-              {searchedAssets.map((asset) => (
+            <motion.div className="library-grid" layout>
+              {visibleLibraryAssets.map((asset) => (
                 <LibraryItem key={asset.path} asset={asset} onOpen={setOpenAsset} />
               ))}
-            </div>
+            </motion.div>
+            {visibleLibraryAssets.length < filteredLibraryAssets.length && (
+              <div className="library-actions">
+                <button type="button" onClick={() => setVisibleAssetCount((current) => current + libraryPageSize)}>
+                  Load more work
+                </button>
+                <button type="button" onClick={() => setVisibleAssetCount(filteredLibraryAssets.length)}>
+                  Show all
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
         <section id="contact" className="contact-section">
-          <div className="content-shell contact-grid">
+          <motion.div className="content-shell contact-grid" variants={revealVariants} initial="hidden" whileInView="show" viewport={revealViewport}>
             <div>
               <span className="eyebrow">Build the next campaign</span>
               <h2>For brands that need taste, speed, and measurable social presence.</h2>
@@ -607,16 +756,23 @@ export default function App() {
               </span>
               <Zap aria-hidden="true" />
             </div>
-          </div>
+          </motion.div>
         </section>
       </main>
 
-      <footer className="site-footer">
-        <span>{profile.name}</span>
-        <span>{profile.role}</span>
-      </footer>
+      <motion.footer className="site-footer" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={revealViewport} transition={{ duration: 0.65 }}>
+        <div className="footer-brand">
+          <strong>{profile.name}</strong>
+          <span>{profile.role}</span>
+        </div>
+        <div className="footer-links">
+          <a href="#work">Work</a>
+          <a href="#resume">Resume</a>
+          <a href={`mailto:${profile.email}`}>Email</a>
+        </div>
+      </motion.footer>
 
       <AssetModal asset={openAsset} onClose={() => setOpenAsset(null)} />
-    </>
+    </div>
   );
 }
