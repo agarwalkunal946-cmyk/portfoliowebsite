@@ -101,6 +101,15 @@ function clientAssetsPlugin() {
 
 export default defineConfig({
   plugins: [react(), clientAssetsPlugin()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          motion: ["framer-motion"]
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     strictPort: false
