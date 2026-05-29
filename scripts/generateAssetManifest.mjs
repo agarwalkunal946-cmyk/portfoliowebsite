@@ -101,6 +101,27 @@ function classify(relativePath) {
   };
 }
 
+function readExistingManifest() {
+  if (!fs.existsSync(outputFile)) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(outputFile, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+function withoutGeneratedAt(manifest) {
+  if (!manifest) {
+    return undefined;
+  }
+
+  const { generatedAt, ...rest } = manifest;
+  return rest;
+}
+
 if (!fs.existsSync(sourceDir)) {
   if (fs.existsSync(outputFile)) {
     console.log("Source folder is local-only; using committed asset manifest.");
@@ -144,12 +165,20 @@ const totals = assets.reduce(
   { files: 0, bytes: 0, byType: {}, byMedium: {} }
 );
 
-const manifest = {
-  generatedAt: new Date().toISOString(),
+const nextManifestBody = {
   sourceFolder: "Clients_requirementAToZ",
   totalSizeLabel: bytesToLabel(totals.bytes),
   totals,
   assets
+};
+
+const existingManifest = readExistingManifest();
+const manifestChanged =
+  JSON.stringify(withoutGeneratedAt(existingManifest)) !== JSON.stringify(nextManifestBody);
+
+const manifest = {
+  generatedAt: manifestChanged || !existingManifest?.generatedAt ? new Date().toISOString() : existingManifest.generatedAt,
+  ...nextManifestBody
 };
 
 fs.writeFileSync(outputFile, `${JSON.stringify(manifest, null, 2)}\n`);
